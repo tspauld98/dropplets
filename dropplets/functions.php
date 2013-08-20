@@ -204,7 +204,6 @@ function get_pagination($page,$total) {
     
     $string .= "</ul>";
     return $string;
-    
 }
 
 /*-----------------------------------------------------------------------------------*/
@@ -240,9 +239,7 @@ function get_installed_templates() {
             </li>
         <?php
         }
-
     endforeach;
-
 }
 
 /*-----------------------------------------------------------------------------------*/
@@ -253,32 +250,35 @@ function get_premium_templates($type = 'all', $target = 'blank') {
     
     $templates = simplexml_load_file('http://dropplets.com/marketplace/templates-'. $type .'.xml');
     
-    foreach ($templates as $template):
-        
-        $template_name=$template->name;
-        $template_file_name=$template->file;
-        $template_price=$template->price;
-        
-        { ?>
-        <li class="premium">
-            <div class="shadow"></div>
-            <img src="http://dropplets.com/demo/templates/<?php echo $template_file_name; ?>/screenshot.jpg" alt="<?php echo $template_name; ?>">
-            <a class="buy" href="http://dropplets.com/marketplace/?template=<?php echo $template_file_name; ?>" title="Purchase/Download" target="_<?php echo $target; ?>"><?php echo $template_price; ?></a> 
-            <a class="preview" href="http://dropplets.com/demo/?template=<?php echo $template_file_name; ?>" title="Prview" target="_<?php echo $target; ?>">p</a>    
-        </li>
-        
-        <?php } 
-    
-    endforeach;
-
+    if($templates===FALSE) {
+        // Feed not available.
+    } else {
+        foreach ($templates as $template):
+            
+            // Define some variables
+            $template_name=$template->name;
+            $template_file_name=$template->file;
+            $template_price=$template->price;
+            
+            { ?>
+            <li class="premium">
+                <img src="http://dropplets.com/demo/templates/<?php echo $template_file_name; ?>/screenshot.jpg" alt="<?php echo $template_name; ?>">
+                <a class="buy" href="http://dropplets.com/marketplace/?template=<?php echo $template_file_name; ?>" title="Purchase/Download" target="_<?php echo $target; ?>"><?php echo $template_price; ?></a> 
+                <a class="preview" href="http://dropplets.com/demo/?template=<?php echo $template_file_name; ?>" title="Prview" target="_<?php echo $target; ?>">p</a>    
+            </li>
+            <?php } 
+        endforeach;
+    }
 }
 
 function count_premium_templates($type = 'all') {
-    
-    $templates = simplexml_load_file('http://dropplets.com/marketplace/templates-'. $type .'.xml');
-    $templates_count = $templates->children();
-    echo count($templates_count);
-
+    if($templates===FALSE) {
+        // Feed not available.
+    } else {
+        $templates = simplexml_load_file('http://dropplets.com/marketplace/templates-'. $type .'.xml');
+        $templates_count = $templates->children();
+        echo count($templates_count);
+    }
 }
 
 /*-----------------------------------------------------------------------------------*/
@@ -299,34 +299,11 @@ define('IS_HOME', $is_home);
 /* Get Profile Image (This Needs to be Cached)
 /*-----------------------------------------------------------------------------------*/
 
-function get_twitter_profile_img($username, $size = '') {
-    $api_call = 'https://twitter.com/users/'.$username.'.json';
-    $results = json_decode(file_get_contents($api_call));
-    $image_url = str_replace('_normal', $size, $results->profile_image_url);
-
-    // Replace with your cache directory.
-	$image_path = './cache/';
-	
-	// Get the name of the file.
-	$exploded_image_url = explode("/",$image_url);
-	$image_filename = end($exploded_image_url);
-	$exploded_image_filename = explode(".",$image_filename);
-	$extension = end($exploded_image_filename);
-	
-	// Make sure its an image.
-	if($extension=="gif"||$extension=="jpg"||$extension=="jpeg"||$extension=="png"){
-	
-		// Get the remote image.
-		$image_to_fetch = file_get_contents($image_url);
-		
-		// Save it.
-		$local_image_file  = fopen($image_path.$image_filename, 'w+');
-		chmod($image_path.$image_filename,0755);
-		fwrite($local_image_file, $image_to_fetch);
-		fclose($local_image_file);	
-	}
-	
-	return $image_path.$image_filename;
+function get_twitter_profile_img($username) {
+    
+    // Temporary fix for profile images.
+    $image_url = 'http://dropplets.com/profiles/?id='.$username.'';
+	return $image_url;
 }
 
 /*-----------------------------------------------------------------------------------*/
