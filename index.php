@@ -91,7 +91,7 @@ if ($filename==NULL) {
             $published_iso_date = $post['post_date'];
 
             // Generate the published date.
-            $published_date = date_format(date_create($published_iso_date), $date_format);
+            $published_date = strftime($date_format, strtotime($published_iso_date));
 
             // Get the post category.
             $post_category = $post['post_category'];
@@ -100,7 +100,7 @@ if ($filename==NULL) {
             $post_category_link = $blog_url.'category/'.urlencode(trim(strtolower($post_category)));
 
             // Get the post status.
-            $post_status = $post['post_status'];
+            $post_status = trim(strtolower($post['post_status']));
 
             // Get the post intro.
             $post_intro = $post['post_intro'];
@@ -116,14 +116,8 @@ if ($filename==NULL) {
             }
 
             // Get the post image url.
-            $image = str_replace(array(FILE_EXT), '', POSTS_DIR.$post['fname']).'.jpg';
+            $post_image = get_post_image_url( $post['fname'] ) ?: get_twitter_profile_img($post_author_twitter);
 
-            if (file_exists($image)) {
-                $post_image = $blog_url.str_replace(array(FILE_EXT, './'), '', POSTS_DIR.$post['fname']).'.jpg';
-            } else {
-                $post_image = get_twitter_profile_img($post_author_twitter);
-            }
-            
             if ($post_status == 'draft') continue;
 
             // Get the milti-post template file.
@@ -227,7 +221,7 @@ else if ($filename == 'rss' || $filename == 'atom') {
 				$remove_metadata_from = file(rtrim(POSTS_DIR, '/').'/'.$post['fname']);
 
                 if($filename=='rss') {
-                    $item->addElement('author', str_replace('-', '', $remove_metadata_from[1]).' - ' . $blog_email);
+                    $item->addElement('author', $blog_email . ' (' . str_replace('-', '', $remove_metadata_from[1]) .')');
                     $item->addElement('guid', rtrim($blog_url, '/').'/'.str_replace(FILE_EXT, '', $post['fname']));
                 }
 
@@ -284,7 +278,7 @@ else {
         // Start new buffer.
         ob_start();
 
-	    // Get the index template file.
+	      // Get the index template file.
         include_once $index_file;
 
         // Cache the post on if caching is turned on.
@@ -310,10 +304,11 @@ else {
     } else {
 
         // Get the post title.
-        $post_title = str_replace(array("\n", '# '), '', $fcontents[0]);
+        $post_title = Markdown($fcontents[0]);
+        $post_title = str_replace(array("\n",'<h1>','</h1>'), '', $post_title);
 
-        // Get the post title.
-        $post_intro = htmlspecialchars($fcontents[7]);
+        // Get the post intro.
+        $post_intro = htmlspecialchars(trim($fcontents[7]));
 
         // Get the post author.
         $post_author = str_replace(array("\n", '-'), '', $fcontents[1]);
@@ -325,7 +320,7 @@ else {
         $published_iso_date = str_replace('-', '', $fcontents[3]);
 
         // Generate the published date.
-        $published_date = date_format(date_create($published_iso_date), $date_format);
+        $published_date = strftime($date_format, strtotime($published_iso_date));
 
         // Get the post category.
         $post_category = str_replace(array("\n", '-'), '', $fcontents[4]);
@@ -340,29 +335,17 @@ else {
         $post_link = $blog_url.str_replace(array(FILE_EXT, POSTS_DIR), '', $filename);
 
         // Get the post image url.
-        $image = str_replace(array(FILE_EXT), '', $filename).'.jpg';
+        $post_image = get_post_image_url($filename) ?: get_twitter_profile_img($post_author_twitter);
 
-        if (file_exists($image)) {
-            $post_image = $blog_url.str_replace(array(FILE_EXT, './'), '', $filename).'.jpg';
-        } else {
-            $post_image = get_twitter_profile_img($post_author_twitter);
-        }
-        
         // Get the post content
-        $file_array = file($filename);
-        
-        unset($file_array[0]);
-        unset($file_array[1]);
-        unset($file_array[2]);
-        unset($file_array[3]);
-        unset($file_array[4]);
-        unset($file_array[5]);
-        unset($file_array[6]);
-        
-        $post_content = Markdown(implode("", $file_array));
+        $file_array = array_slice( file($filename), 7);
+        $post_content = Markdown(trim(implode("", $file_array)));
+
+        // free memory
+        unset($file_array);
                 
         // Get the site title.
-        $page_title = str_replace('# ', '', $fcontents[0]);
+        $page_title = trim(str_replace('# ', '', $fcontents[0]));
 
         // Generate the page description and author meta.
         $get_page_meta[] = '<meta name="description" content="' . $post_intro . '">';
@@ -386,7 +369,7 @@ else {
         $get_page_meta[] = '<meta property="og:image" content="' . $post_image . '">';
 
         // Generate all page meta.
-        $page_meta = implode("\n", $get_page_meta);
+        $page_meta = implode("\n\t", $get_page_meta);
 
         // Generate the post.
         $post = Markdown(join('', $fcontents));
@@ -416,10 +399,26 @@ else {
 /*-----------------------------------------------------------------------------------*/
 
 } else {
-    // Get the current url.
-    $domain = @( $_SERVER["HTTPS"] != 'on' ) ? 'http://'.$_SERVER["SERVER_NAME"] : 'https://'.$_SERVER["SERVER_NAME"];
+    // Get the components of the current url.
+    $protocol = @( $_SERVER["HTTPS"] != 'on') ? 'http://' : 'https://';
+    $domain = $_SERVER["SERVER_NAME"];
+    $port = $_SERVER["SERVER_PORT"];
     $path = $_SERVER["REQUEST_URI"];
-    $url = $domain . $path;
+
+    // Check if running on alternate port.
+    if ($protocol === "https://") {
+        if ($port == 443)
+            $url = $protocol . $domain;
+        else
+            $url = $protocol . $domain . ":" . $port;
+    } elseif ($protocol === "http://") {
+        if ($port == 80)
+            $url = $protocol . $domain;
+        else
+            $url = $protocol . $domain . ":" . $port;
+    }
+
+    $url .= $path;
     
     // Check if the install directory is writable.
     $is_writable = (TRUE == is_writable(dirname(__FILE__) . '/'));

@@ -2,16 +2,23 @@
 *.esproj
 *.pxm
 .DS_Store
+
 .htaccess
 config.php
 verify.php
+
 posts/*.md
 posts/*.jpg
-templates/clear/
-templates/typographic/
-templates/cards/
 
-plugins/switcher.php
+templates/*
+!templates/simple/
+
+plugins/*
+!plugins/index.php
+
+posts/*
+!posts/index.php
 
 cache/*.png
 cache/*.jpeg
+cache/*.jpg

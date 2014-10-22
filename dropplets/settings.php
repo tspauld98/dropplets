@@ -40,9 +40,11 @@ define('ACTIVE_TEMPLATE', $template);
 
 $language = 'en-us';
 $feed_max_items = '10';
-$date_format = 'F jS, Y';
+$date_format = '%B %d, %Y';
 $error_title = 'Sorry, But That&#8217;s Not Here';
 $error_text = 'Really sorry, but what you&#8217;re looking for isn&#8217;t here. Click the button below to find something else that might interest you.';
+
+setlocale(LC_ALL, '');
 
 /*-----------------------------------------------------------------------------------*/
 /* Post Configuration
@@ -75,6 +77,12 @@ define('FILE_EXT', '.md');
 /*-----------------------------------------------------------------------------------*/
 /* Cache Configuration
 /*-----------------------------------------------------------------------------------*/
+
+//no caching if user is logged in
+if ( $_SESSION['user'] ) {
+	$post_cache = 'off';
+	$index_cache = 'off';
+}
 
 if (!file_exists(CACHE_DIR) && ($post_cache != 'off' || $index_cache != 'off')) {
 	mkdir(CACHE_DIR,0755,TRUE);
